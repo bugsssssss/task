@@ -25,9 +25,24 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
+    'rest_framework',
     'clients',
     'main'
 ]
+
+REST_FRAMEWORK = {
+    'DEFAULT_AUTHENTICATION_CLASSES': (
+        'rest_framework_simplejwt.authentication.JWTAuthentication',
+    ),
+    'DEFAULT_PERMISSION_CLASSES': [
+        # Require authentication for all views
+        # 'rest_framework.permissions.IsAuthenticated',
+    ],
+    'DEFAULT_RENDERER_CLASSES': (
+        'rest_framework.renderers.JSONRenderer',
+    ),
+    'JSON_INDENT': 4,  # Adjust the indentation level as needed.
+}
 
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
@@ -106,6 +121,21 @@ USE_TZ = True
 # https://docs.djangoproject.com/en/4.2/howto/static-files/
 
 STATIC_URL = 'static/'
+
+if DEBUG:
+    # ? Query logging
+    LOGGING = {
+        'version': 1,
+        'handlers': {
+            'console': {'class': 'logging.StreamHandler'}
+        },
+        'loggers': {
+            'django.db.backends': {
+                'handlers': ['console'],
+                'level': 'DEBUG'
+            }
+        }
+    }
 
 # Default primary key field type
 # https://docs.djangoproject.com/en/4.2/ref/settings/#default-auto-field
