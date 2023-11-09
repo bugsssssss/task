@@ -5,7 +5,7 @@ COPY server /server
 WORKDIR /server
 EXPOSE 8000
 
-# RUN apk add postgresql-client build-base postgresql-dev
+RUN apk add postgresql-client build-base postgresql-dev
 
 RUN pip install -r /temp/requirements.txt
 
