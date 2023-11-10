@@ -13,7 +13,7 @@ from django.shortcuts import get_object_or_404
 
 
 def get_employee_data(employee, month, year):
-    if isinstance(month, int) and isinstance(year, int):
+    if month and year:
         related_orders = Order.objects.filter(
             employee=employee,
             created__year=year,
