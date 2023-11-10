@@ -14,11 +14,15 @@ from django.shortcuts import get_object_or_404
 
 def get_employee_data(employee, month, year):
     if month and year:
-        related_orders = Order.objects.filter(
-            employee=employee,
-            created__year=year,
-            created__month=month
-        ).select_related('employee', 'client')
+        try:
+            related_orders = Order.objects.filter(
+                employee=employee,
+                created__year=year,
+                created__month=month
+            ).select_related('employee', 'client')
+        except ValueError:
+            related_orders = Order.objects.filter(
+                employee=employee).select_related('employee', 'client')
     else:
         related_orders = Order.objects.filter(
             employee=employee).select_related('employee', 'client')
@@ -83,11 +87,15 @@ class ClientStatisticsView(views.APIView):
 
         # Тут также можно отдельно вынести как функцию, если к примеру нужно будет для всех клиентов выводить
         if month and year:
-            related_orders = Order.objects.filter(
-                client=client_instance,
-                created__year=year,
-                created__month=month
-            ).select_related('client', 'employee')
+            try:
+                related_orders = Order.objects.filter(
+                    client=client_instance,
+                    created__year=year,
+                    created__month=month
+                ).select_related('client', 'employee')
+            except ValueError:
+                related_orders = Order.objects.filter(
+                    client=client_instance).select_related('client', 'employee')
         else:
             related_orders = Order.objects.filter(
                 client=client_instance).select_related('client', 'employee')
