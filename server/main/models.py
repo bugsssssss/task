@@ -31,13 +31,14 @@ class Order(models.Model):
         "employee"), on_delete=models.PROTECT)  # required
 
     created = models.DateTimeField(
-        ("created"),  auto_now_add=True)
+        ("created"), auto_now_add=True)
     updated = models.DateTimeField(
         ("updated"),  auto_now=True)
 
     class Meta:
         verbose_name = ("Order")
         verbose_name_plural = ("Orders")
+        ordering = ['-created']
 
     def __str__(self):
         return f'Order #{self.id}'

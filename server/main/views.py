@@ -9,109 +9,90 @@ from django.db.models import Count
 from .serializers import EmployeeSerializer
 from django.shortcuts import get_object_or_404
 
-# Можно вынести как отдельную функцию и передавать объект
-
-
-def get_employee_data(employee, month, year):
-    if month and year:
-        try:
-            related_orders = Order.objects.filter(
-                employee=employee,
-                created__year=year,
-                created__month=month
-            ).select_related('employee', 'client')
-        except ValueError:
-            related_orders = Order.objects.filter(
-                employee=employee).select_related('employee', 'client')
-    else:
-        related_orders = Order.objects.filter(
-            employee=employee).select_related('employee', 'client')
-
-    # Для уникальных клиентов связанных с работником
-    employee_clients = related_orders.values('client').distinct()
-
-    # Для всех заказов связянных с работником
-    employee_orders = related_orders.all()
-
-    # Общая сумма
-    total_price = related_orders.aggregate(
-        total_price=Sum('products__price')
-    )['total_price'] or 0
-
-    data = {
-        'id': employee.id,
-        'full_name': employee.full_name,
-        'clients_count': len(employee_clients),
-        'orders_count': len(employee_orders),
-        'total_price': total_price,
-    }
-
-    return data
-
 
 class EmployeeStatisticsView(views.APIView):
     def get(self, request, id, *args, **kwargs):
-        month = request.GET.get('month') or ''
-        year = request.GET.get('year') or ''
+        month = request.GET.get('month')
+        year = request.GET.get('year')
 
-        # Можно также использовать try, catch
-        employee_instance = get_object_or_404(Employee, id=id)
+        if month and year:
+            try:
+                employee_data = Employee.objects.filter(
+                    id=id,
+                    order__created__month=month,
+                    order__created__year=year
+                ).annotate(
+                    clients_count=Count('order__client', distinct=True),
+                    orders_count=Count('order', distinct=True),
+                    total_price=Sum('order__products__price')
+                ).values('full_name', 'clients_count', 'orders_count', 'total_price').first()
+            except Exception as e:
+                return Response({'error': str(e)}, status=status.HTTP_404_NOT_FOUND)
+        else:
+            employee_data = Employee.objects.filter(id=id).annotate(
+                clients_count=Count('order__client', distinct=True),
+                orders_count=Count('order', distinct=True),
+                total_price=Sum('order__products__price')
+            ).values('full_name', 'clients_count', 'orders_count', 'total_price').first()
 
-        data = get_employee_data(employee_instance, month, year)
-
-        return Response(
-            data,
-            status=status.HTTP_200_OK
-        )
+        return Response(employee_data, status=status.HTTP_200_OK)
 
 
 class AllEmployeesStatisticView(views.APIView):
     def get(self, request, *args, **kwargs):
-        month = request.GET.get('month') or ''
-        year = request.GET.get('year') or ''
+        month = request.GET.get('month')
+        year = request.GET.get('year')
 
-        employee_instances = Employee.objects.all()
-        all_data = [get_employee_data(x, month, year)
-                    for x in employee_instances]
+        if month and year:
+            try:
+                employee_data = Employee.objects.filter(
+                    order__created__month=month, order__created__year=year
+                ).annotate(
+                    clients_count=Count('order__client', distinct=True),
+                    orders_count=Count('order', distinct=True),
+                    total_price=Sum('order__products__price')
+                ).values('id', 'full_name', 'clients_count', 'orders_count', 'total_price')
+            except Exception as e:
+                return Response({'error': str(e)}, status=status.HTTP_404_NOT_FOUND)
 
-        return Response(all_data, status=status.HTTP_200_OK)
+        else:
+            employee_data = Employee.objects.all().annotate(
+                clients_count=Count('order__client', distinct=True),
+                orders_count=Count('order', distinct=True),
+                total_price=Sum('order__products__price')
+            ).values('id', 'full_name', 'clients_count', 'orders_count', 'total_price')
+
+        employee_data_list = list(employee_data)
+        return Response(employee_data_list, status=status.HTTP_200_OK)
 
 
 class ClientStatisticsView(views.APIView):
     def get(self, request, id, *args, **kwargs):
-        month = request.GET.get('month') or ''
-        year = request.GET.get('year') or ''
+        month = request.GET.get('month')
+        year = request.GET.get('year')
 
-        # Можно также использовать try, catch
-        client_instance = get_object_or_404(Client, id=id)
-
-        # Тут также можно отдельно вынести как функцию, если к примеру нужно будет для всех клиентов выводить
         if month and year:
             try:
-                related_orders = Order.objects.filter(
-                    client=client_instance,
-                    created__year=year,
-                    created__month=month
-                ).select_related('client', 'employee')
-            except ValueError:
-                related_orders = Order.objects.filter(
-                    client=client_instance).select_related('client', 'employee')
+                client_instance = Client.objects.filter(
+                    id=id,
+                    order__created__month=month,
+                    order__created__year=year
+                ).annotate(
+                    orders_count=Count('order', distinct=True),
+                    total_price=Sum('order__products__price')
+                ).values('full_name', 'orders_count', 'total_price').first()
+            except Exception as e:
+                return Response({'error': str(e)}, status=status.HTTP_404_NOT_FOUND)
+
         else:
-            related_orders = Order.objects.filter(
-                client=client_instance).select_related('client', 'employee')
-
-        total_price = related_orders.aggregate(
-            total_price=Sum('products__price')
-        )['total_price'] or 0
-
-        data = {
-            'id': client_instance.id,
-            'full_name': client_instance.full_name,
-            'orders_count': len(related_orders),
-            'total_price': total_price
-        }
+            client_instance = Client.objects.filter(
+                id=id,
+            ).annotate(
+                orders_count=Count('order', distinct=True),
+                total_price=Sum('order__products__price')
+            ).values('full_name', 'orders_count', 'total_price').first()
 
         return Response(
-            data,
+            client_instance,
             status=status.HTTP_200_OK
         )
